@@ -20,8 +20,9 @@ export class FollowersPage extends React.Component {
 
         this.state = {
             userId: 0,
+            userTotalFollowers: 0,
             followingData: [],
-            isLoading: false,
+            isLoading: true,
             isError: false
         };
 
@@ -29,10 +30,22 @@ export class FollowersPage extends React.Component {
     }
 
     componentDidMount() {
-        GetUserFollowingData(cookie.load('user_id')).then((res) => {
-            this.setState({followingData: res.data, userId: cookie.load('user_id')});
+        const userId = cookie.load('user_id');
+
+        GetUserFollowingData(userId).then((res) => {
+            const user = res.data.find(x => x.id === parseInt(userId));
+            const userIndex = res.data.findIndex(x => x.id === parseInt(userId));
+
+            delete res.data[userIndex];
+
+            this.setState({
+                isLoading: false,
+                followingData: res.data,
+                userId,
+                userTotalFollowers: user.total_followers
+            });
         }).catch(err => {
-            this.setState({isError: true})
+            this.setState({isLoading: false, isError: true})
         });
     }
 
@@ -46,7 +59,9 @@ export class FollowersPage extends React.Component {
         const el = document.getElementById(data.id);
         const entityId = data.id.split('_')[2];
         const followingData = this.state.followingData.slice(0);
-        const row = followingData.find(x => x.id === parseInt(entityId));
+        const row = followingData.find(x => {
+            return x ? x.id === parseInt(entityId) : false;
+        });
 
         if (!el) return;
 
@@ -166,7 +181,8 @@ export class FollowersPage extends React.Component {
                         height: '2px'
                     }}/>
 
-                    <Header as={'h2'} content={`Welcome ${cookie.load('username')}`}/>
+                    <Header as={'h2'}
+                            content={`Welcome, ${cookie.load('username')} (Followers: ${this.state.userTotalFollowers})`}/>
                     <Header as={'h3'} content={'Choose users to follow'}/>
                     <ReactTable
                         data={this.state.followingData}
